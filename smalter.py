@@ -116,7 +116,7 @@ for smali in smalis:
 			+ '    # smaltered\n' \
 			+ '    const/4 v0, 0x6\n' \
 			+ '    const-string v1, "%s"\n' % TAG \
-			+ '    const-string v2, "%s"\n' % ('%s.%s in %s (%s)' % (source if source else _class[1:-1], method, smali, _class)) \
+			+ '    const-string v2, "%s"\n' % ('%s.%s(%s) in %s (%s)' % (source if source else _class[1:-1], method, ''.join(params), smali, _class)) \
 			+ '    invoke-static {v0, v1, v2}, Landroid/util/Log;->println(ILjava/lang/String;Ljava/lang/String;)I'
 
 		replace = replace.replace('.registers %d' % registers, '.registers %d\n    %s' % (registers, debug))
