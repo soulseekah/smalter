@@ -16,6 +16,8 @@ for _dir in dirs:
 print '%d smalis found...' % len(smalis) 
 print
 
+injected = 0
+
 for smali in smalis:
 	_class = None
 	source = None
@@ -73,6 +75,14 @@ for smali in smalis:
 		if ' bridge ' in signature:
 			continue
 
+		if '-wide' in original:
+			# TODO
+			#into  print "I don't work with -wide params yet :("
+			continue
+		if 'J' in params or 'D' in params:
+			# TODO wide wide
+			continue
+
 		ps = len(params)
 		if ' static ' not in signature:
 			ps += 1 # Non static methods will have p0 as 'this'
@@ -81,7 +91,6 @@ for smali in smalis:
 			# There's a limit to offsetting parameters by too much, static calls are done with 4-bit register references
 			print 'Skipping %s.%s(%s) in %s, too many parameters (16 max)' % (_class, method, ''.join(params), smali)
 			continue
-
 		# Find the registers line
 		match = re.findall(r'^%s.*?\.end method$' % re.escape(signature), code, re.DOTALL | re.MULTILINE)
 		if len(match) > 1:
@@ -94,6 +103,9 @@ for smali in smalis:
 		original = match.pop()
 		replace  = original
 
+		if '#smaltered' in original:
+			continue
+
 		# Make space for registers if needed
 		if (ps + 3) > registers:
 			replace = replace.replace('.registers %d' % registers, '.registers %d' % (registers + abs(registers - ps - 3)))
@@ -101,12 +113,16 @@ for smali in smalis:
 
 		# Inject our debug code
 		debug = '\n' \
+			+ '    # smaltered\n' \
 			+ '    const/4 v0, 0x6\n' \
 			+ '    const-string v1, "%s"\n' % TAG \
-			+ '    const-string v2, "%s"\n' % ('%s(%s) in %s (%s)' % (source if source else _class[1:-1], method, smali, _class)) \
-			+ '    invoke-static {v0, v1, v2}, Landroid/util/Log;->println(ILjava/lang/String;Ljava/lang/String;)I\n'
+			+ '    const-string v2, "%s"\n' % ('%s.%s in %s (%s)' % (source if source else _class[1:-1], method, smali, _class)) \
+			+ '    invoke-static {v0, v1, v2}, Landroid/util/Log;->println(ILjava/lang/String;Ljava/lang/String;)I'
 
 		replace = replace.replace('.registers %d' % registers, '.registers %d\n    %s' % (registers, debug))
+		# TODO: add after annotations if they exist
+
+		injected += 1
 
 		# Final replace
 		code = code.replace(original, replace)
@@ -114,3 +130,5 @@ for smali in smalis:
 	f.seek(0)
 	f.write(code)
 	f.close()
+
+print 'Smaltered %d methods!' % injected
